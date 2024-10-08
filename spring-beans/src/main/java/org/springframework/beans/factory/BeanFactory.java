@@ -243,7 +243,8 @@ public interface BeanFactory {
 	 * but may also be translated into a conventional by-name lookup based on the name
 	 * of the given type. For more extensive retrieval operations across sets of beans,
 	 * use {@link ListableBeanFactory} and/or {@link BeanFactoryUtils}.
-	 * TODO
+	 * 这个方法进入 ListableBeanFactory 的按类型查找区域，但也可以基于给定类型的名字翻译成按名字查找。
+	 * 要跨bean集进行更广泛的检索操作，请使用 ListableBeanFactory 和/或 BeanFactoryUtils。
 	 * @param requiredType type the bean must match; can be an interface or superclass
 	 * @param args arguments to use when creating a bean instance using explicit arguments
 	 * (only applied when creating a new instance as opposed to retrieving an existing one)
@@ -259,6 +260,7 @@ public interface BeanFactory {
 	/**
 	 * Return a provider for the specified bean, allowing for lazy on-demand retrieval
 	 * of instances, including availability and uniqueness options.
+	 * 返回给定bean的提供者，允许延迟按需检索实例，包括可用性和唯一性选项。
 	 * <p>For matching a generic type, consider {@link #getBeanProvider(ResolvableType)}.
 	 * @param requiredType type the bean must match; can be an interface or superclass
 	 * @return a corresponding provider handle
@@ -272,10 +274,13 @@ public interface BeanFactory {
 	 * of instances, including availability and uniqueness options. This variant allows
 	 * for specifying a generic type to match, similar to reflective injection points
 	 * with generic type declarations in method/constructor parameters.
+	 * 返回给定bean的提供者，允许延迟按需检索实例，包括可用性和唯一性选项。该变体方法允许指定一个匹配的泛型类型，
+	 * 类似于在方法/构造器中使用泛型声明来反射拦截点。
 	 * <p>Note that collections of beans are not supported here, in contrast to reflective
 	 * injection points. For programmatically retrieving a list of beans matching a
 	 * specific type, specify the actual bean type as an argument here and subsequently
 	 * use {@link ObjectProvider#orderedStream()} or its lazy streaming/iteration options.
+	 * TODO
 	 * <p>Also, generics matching is strict here, as per the Java assignment rules.
 	 * For lenient fallback matching with unchecked semantics (similar to the 'unchecked'
 	 * Java compiler warning), consider calling {@link #getBeanProvider(Class)} with the
