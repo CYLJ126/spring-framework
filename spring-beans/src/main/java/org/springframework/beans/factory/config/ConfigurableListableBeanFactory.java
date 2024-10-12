@@ -39,8 +39,8 @@ import java.util.Iterator;
  * 或 ListableBeanFactory。这个接口只是为了允许框架内部的即插即用，即使需要访问 bean 工厂配置方法也是如此。
  *
  * @author Juergen Hoeller
- * @since 03.11.2003
  * @see org.springframework.context.support.AbstractApplicationContext#getBeanFactory()
+ * @since 03.11.2003
  */
 public interface ConfigurableListableBeanFactory
 		extends ListableBeanFactory, AutowireCapableBeanFactory, ConfigurableBeanFactory {
@@ -65,6 +65,7 @@ public interface ConfigurableListableBeanFactory
 	 * <p>By default, only the BeanFactoryAware interface is ignored.
 	 * For further types to ignore, invoke this method for each type.
 	 * 默认 情况下，只有 BeanFactoryAware 接口会被忽略，如果要忽略其他类型，则对指定类型一一调用该方法。
+	 *
 	 * @param ifc the dependency interface to ignore
 	 * @see org.springframework.beans.factory.BeanFactoryAware
 	 * @see org.springframework.context.ApplicationContextAware
@@ -83,13 +84,14 @@ public interface ConfigurableListableBeanFactory
 	 * <p>Note: There are no such default types registered in a plain BeanFactory,
 	 * not even for the BeanFactory interface itself.
 	 * 原生 BeanFactory 中没有注册默认类型，甚至对于 BeanFactory 接口本身也不例外。
+	 *
 	 * @param dependencyType the dependency type to register. This will typically
-	 * be a base interface such as BeanFactory, with extensions of it resolved
-	 * as well if declared as an autowiring dependency (for example, ListableBeanFactory),
-	 * as long as the given value actually implements the extended interface.
+	 *                       be a base interface such as BeanFactory, with extensions of it resolved
+	 *                       as well if declared as an autowiring dependency (for example, ListableBeanFactory),
+	 *                       as long as the given value actually implements the extended interface.
 	 * @param autowiredValue the corresponding autowired value. This may also be an
-	 * implementation of the {@link org.springframework.beans.factory.ObjectFactory}
-	 * interface, which allows for lazy resolution of the actual target value.
+	 *                       implementation of the {@link org.springframework.beans.factory.ObjectFactory}
+	 *                       interface, which allows for lazy resolution of the actual target value.
 	 */
 	void registerResolvableDependency(Class<?> dependencyType, @Nullable Object autowiredValue);
 
@@ -100,7 +102,7 @@ public interface ConfigurableListableBeanFactory
 	 * <p>This method checks ancestor factories as well.
 	 * 该方法也会检查祖先工厂。
 	 *
-	 * @param beanName the name of the bean to check
+	 * @param beanName   the name of the bean to check
 	 * @param descriptor the descriptor of the dependency to resolve
 	 * @return whether the bean should be considered as autowire candidate
 	 * @throws NoSuchBeanDefinitionException if there is no bean with the given name
@@ -125,7 +127,7 @@ public interface ConfigurableListableBeanFactory
 	 * @param beanName the name of the bean
 	 * @return the registered BeanDefinition
 	 * @throws NoSuchBeanDefinitionException if there is no bean with the given name
-	 * defined in this factory
+	 *                                       defined in this factory
 	 */
 	BeanDefinition getBeanDefinition(String beanName) throws NoSuchBeanDefinitionException;
 
@@ -139,11 +141,11 @@ public interface ConfigurableListableBeanFactory
 	 * 名称的类型/注解的特定检索的工作方式。
 	 *
 	 * @return the composite iterator for the bean names view
-	 * @since 4.1.2
 	 * @see #containsBeanDefinition
 	 * @see #registerSingleton
 	 * @see #getBeanNamesForType
 	 * @see #getBeanNamesForAnnotation
+	 * @since 4.1.2
 	 */
 	Iterator<String> getBeanNamesIterator();
 
@@ -156,9 +158,9 @@ public interface ConfigurableListableBeanFactory
 	 * for beans which have already been created at this point will be kept around.
 	 * 通常在更改原始 bean 定义后触发，例如，在应用 BeanFactoryPostProcessor 之后。请注意，此时已经创建的 bean 的元数据将被保留。
 	 *
-	 * @since 4.2
 	 * @see #getBeanDefinition
 	 * @see #getMergedBeanDefinition
+	 * @since 4.2
 	 */
 	void clearMetadataCache();
 
@@ -190,9 +192,10 @@ public interface ConfigurableListableBeanFactory
 	 * {@link org.springframework.beans.factory.FactoryBean FactoryBeans}.
 	 * Typically invoked at the end of factory setup, if desired.
 	 * 确保所有非懒加载的单例被初始化，还要考虑 FactoryBean。如果需要，通常在工厂设置结束时调用。
+	 *
 	 * @throws BeansException if one of the singleton beans could not be created.
-	 * Note: This may have left the factory with some beans already initialized!
-	 * Call {@link #destroySingletons()} for full cleanup in this case.
+	 *                        Note: This may have left the factory with some beans already initialized!
+	 *                        Call {@link #destroySingletons()} for full cleanup in this case.
 	 * @see #destroySingletons()
 	 */
 	void preInstantiateSingletons() throws BeansException;
