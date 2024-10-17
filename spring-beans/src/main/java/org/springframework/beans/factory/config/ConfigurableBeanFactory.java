@@ -45,13 +45,13 @@ import java.util.concurrent.Executor;
  * needs. This extended interface is just meant to allow for framework-internal
  * plug'n'play and for special access to bean factory configuration methods.
  * 这个 bean 工厂接口并不打算在普通的应用程序代码中使用：通常需要的是 BeanFactory 或 ListableBeanFactory。
- * 这个扩展接口仅用于
+ * 这个扩展接口仅用于框架内部的即插即用，以及对 bean 工厂配置方法的特殊访问。
  *
  * @author Juergen Hoeller
- * @since 03.11.2003
  * @see org.springframework.beans.factory.BeanFactory
  * @see org.springframework.beans.factory.ListableBeanFactory
  * @see ConfigurableListableBeanFactory
+ * @since 03.11.2003
  */
 public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, SingletonBeanRegistry {
 
@@ -85,7 +85,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 *
 	 * @param parentBeanFactory the parent BeanFactory
 	 * @throws IllegalStateException if this factory is already associated with
-	 * a parent BeanFactory
+	 *                               a parent BeanFactory
 	 * @see #getParentBeanFactory()
 	 */
 	void setParentBeanFactory(BeanFactory parentBeanFactory) throws IllegalStateException;
@@ -93,7 +93,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	/**
 	 * Set the class loader to use for loading bean classes.
 	 * Default is the thread context class loader.
-	 * 设置用于加载 bean 类型的类加载器。，默认是线程上下文类加载器。
+	 * 设置用于加载 bean 类型的类加载器。默认是线程上下文类加载器。
 	 * <p>Note that this class loader will only apply to bean definitions
 	 * that do not carry a resolved bean class yet. This is the case as of
 	 * Spring 2.0 by default: Bean definitions only carry bean class names,
@@ -102,14 +102,14 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * 开始就是这种情况： Bean 定义只带有 bean 类名，一旦工厂处理了 bean 定义，就可以解析了。
 	 *
 	 * @param beanClassLoader the class loader to use,
-	 * or {@code null} to suggest the default class loader
+	 *                        or {@code null} to suggest the default class loader
 	 */
 	void setBeanClassLoader(@Nullable ClassLoader beanClassLoader);
 
 	/**
 	 * Return this factory's class loader for loading bean classes
 	 * (only {@code null} if even the system ClassLoader isn't accessible).
-	 * 返回此工厂的类加载器以加载 bean 类（仅系统 ClassLoader 都无法访问时才仅返回 null）。
+	 * 返回此工厂的类加载器以加载 bean 类（仅系统类加载器都无法访问时才仅返回 null）。
 	 *
 	 * @see org.springframework.util.ClassUtils#forName(String, ClassLoader)
 	 */
@@ -162,12 +162,12 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 
 	/**
 	 * Specify the resolution strategy for expressions in bean definition values.
-	 * 指定在 bean 定义值中的表达式的解析策略，即设置SpEL表达式解析器。
+	 * 指定在 bean 定义值中的表达式的解析策略，即设置 SpEL 表达式解析器。
 	 * <p>There is no expression support active in a BeanFactory by default.
 	 * An ApplicationContext will typically set a standard expression strategy
 	 * here, supporting "#{...}" expressions in a Unified EL compatible style.
-	 * 默认情况下在一个BeanFactory中是没有激活的表达式支持的。应用上下文通常在此设置一个标准的表达式策略，
-	 * 在统一的EL兼容风格中，支持“#{...}”。
+	 * 默认情况下在一个 BeanFactory 中是没有激活的表达式支持的。应用上下文通常在此设置一个标准的表达式策略，
+	 * 在统一的 EL 兼容风格中，支持“#{...}”。
 	 *
 	 * @since 3.0
 	 */
@@ -185,17 +185,17 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	/**
 	 * Set the {@link Executor} (possibly a {@link org.springframework.core.task.TaskExecutor})
 	 * for background bootstrapping.
-	 * 为后台启动设置执行器（可能是一个 TaskExecutor）。
+	 * 为后台启动设置线程池（可能是一个 TaskExecutor）。
 	 *
-	 * @since 6.2
 	 * @see org.springframework.beans.factory.support.AbstractBeanDefinition#setBackgroundInit
+	 * @since 6.2
 	 */
 	void setBootstrapExecutor(@Nullable Executor executor);
 
 	/**
 	 * Return the {@link Executor} (possibly a {@link org.springframework.core.task.TaskExecutor})
 	 * for background bootstrapping, if any.
-	 * 返回为后台启动设置的执行器。
+	 * 返回为后台启动设置的线程池。
 	 *
 	 * @since 6.2
 	 */
@@ -245,7 +245,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * 该方法将注册一个共享的自定义编辑器实例，对该实例的访问将会被同步，以确保线程安全性。通常更好的方式
 	 * 是使用 addPropertyEditorRegistrar() 来替代当前方法，以避免在自定义编辑器中同步。
 	 *
-	 * @param requiredType type of the property
+	 * @param requiredType        type of the property
 	 * @param propertyEditorClass the {@link PropertyEditor} class to register
 	 */
 	void registerCustomEditor(Class<?> requiredType, Class<? extends PropertyEditor> propertyEditorClass);
@@ -267,9 +267,9 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * any custom editors or custom editor registrars irrelevant.
 	 * 这会重写默认的 PropertyEditor 机制，从而使任何自定义编辑器或自定义编辑器注册表变得无关紧要。
 	 *
-	 * @since 2.5
 	 * @see #addPropertyEditorRegistrar
 	 * @see #registerCustomEditor
+	 * @since 2.5
 	 */
 	void setTypeConverter(TypeConverter typeConverter);
 
@@ -341,7 +341,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * 注册给定的作用域，由给定的 Scope 实现提供支持。
 	 *
 	 * @param scopeName the scope identifier
-	 * @param scope the backing Scope implementation
+	 * @param scope     the backing Scope implementation
 	 */
 	void registerScope(String scopeName, Scope scope);
 
@@ -414,7 +414,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * 通常在工厂配置期间调用，但也可用于别名的运行时注册。因此，工厂的实现应该对别名的访问进行同步。
 	 *
 	 * @param beanName the canonical name of the target bean
-	 * @param alias the alias to be registered for the bean
+	 * @param alias    the alias to be registered for the bean
 	 * @throws BeanDefinitionStoreException if the alias is already in use
 	 */
 	void registerAlias(String beanName, String alias) throws BeanDefinitionStoreException;
@@ -463,7 +463,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * For container-internal use only.
 	 * 显式控制指定 bean 的当前创建中状态。仅供容器内部使用。
 	 *
-	 * @param beanName the name of the bean
+	 * @param beanName   the name of the bean
 	 * @param inCreation whether the bean is currently in creation
 	 * @since 3.1
 	 */
@@ -482,9 +482,9 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	/**
 	 * Register a dependent bean for the given bean,
 	 * to be destroyed before the given bean is destroyed.
-	 * 为给定的 bean 注册一个依赖的 bean，在销毁给定的 bean 之前先销毁。
+	 * 为给定的 bean 注册一个依赖的 bean，该 bean 在依赖的 bean 之前先被销毁。
 	 *
-	 * @param beanName the name of the bean
+	 * @param beanName          the name of the bean
 	 * @param dependentBeanName the name of the dependent bean
 	 * @since 2.5
 	 */
@@ -519,7 +519,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * and logged instead of propagated to the caller of this method.
 	 * 应捕获并记录销毁过程中出现的任何异常，而不是传播给此方法的调用方。
 	 *
-	 * @param beanName the name of the bean definition
+	 * @param beanName     the name of the bean definition
 	 * @param beanInstance the bean instance to destroy
 	 */
 	void destroyBean(String beanName, Object beanInstance);
