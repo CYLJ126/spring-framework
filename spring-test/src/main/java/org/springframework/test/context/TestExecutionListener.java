@@ -72,12 +72,18 @@ package org.springframework.test.context;
  * MicrometerObservationRegistryTestExecutionListener}</li>
  * <li>{@link org.springframework.test.context.support.DirtiesContextTestExecutionListener
  * DirtiesContextTestExecutionListener}</li>
+ * <li>{@link org.springframework.test.context.support.CommonCachesTestExecutionListener
+ * CommonCachesTestExecutionListener}</li>
  * <li>{@link org.springframework.test.context.transaction.TransactionalTestExecutionListener
  * TransactionalTestExecutionListener}</li>
  * <li>{@link org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener
  * SqlScriptsTestExecutionListener}</li>
  * <li>{@link org.springframework.test.context.event.EventPublishingTestExecutionListener
  * EventPublishingTestExecutionListener}</li>
+ * <li>{@link org.springframework.test.context.bean.override.mockito.MockitoResetTestExecutionListener
+ * MockitoResetTestExecutionListener}</li>
+ * <li>{@link org.springframework.test.context.bean.override.BeanOverrideTestExecutionListener
+ * BeanOverrideTestExecutionListener}</li>
  * </ul>
  *
  * @author Sam Brannen

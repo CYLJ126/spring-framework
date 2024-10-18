@@ -27,11 +27,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.test.context.bean.override.mockito.MockitoBeanForBeanFactoryIntegrationTests.TestBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBeanForFactoryBeanIntegrationTests.TestBean;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 /**
  * Test {@link MockitoSpyBean @MockitoSpyBean} for a factory bean configuration.
@@ -40,7 +41,7 @@ import static org.mockito.Mockito.doReturn;
  */
 @SpringJUnitConfig
 @TestMethodOrder(OrderAnnotation.class)
-class MockitoSpyBeanForBeanFactoryIntegrationTests {
+class MockitoSpyBeanForFactoryBeanIntegrationTests {
 
 	@MockitoSpyBean
 	private TestBean testBean;
@@ -57,12 +58,12 @@ class MockitoSpyBeanForBeanFactoryIntegrationTests {
 		TestBean bean = this.applicationContext.getBean(TestBean.class);
 		assertThat(this.testBean).as("injected same").isSameAs(bean);
 		assertThat(bean.hello()).isEqualTo("hi");
-		Mockito.verify(bean).hello();
+		verify(bean).hello();
 
 		doReturn("sp-hi").when(this.testBean).hello();
 
 		assertThat(bean.hello()).as("after stubbing").isEqualTo("sp-hi");
-		Mockito.verify(bean, Mockito.times(2)).hello();
+		verify(bean, Mockito.times(2)).hello();
 	}
 
 	@Order(2)

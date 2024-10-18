@@ -28,8 +28,8 @@ import org.springframework.util.StringUtils;
 
 /**
  * {@link SmartInstantiationAwareBeanPostProcessor} implementation that wraps
- * beans in order to support the {@link BeanOverrideStrategy#WRAP_BEAN WRAP_BEAN}
- * bean override strategy.
+ * beans in order to support the {@link BeanOverrideStrategy#WRAP WRAP} bean
+ * override strategy.
  *
  * @author Simon Baslé
  * @author Stephane Nicoll
@@ -39,10 +39,10 @@ class WrapEarlyBeanPostProcessor implements SmartInstantiationAwareBeanPostProce
 
 	private final Map<String, Object> earlyReferences = new ConcurrentHashMap<>(16);
 
-	private final BeanOverrideRegistrar overrideRegistrar;
+	private final BeanOverrideRegistry beanOverrideRegistry;
 
-	WrapEarlyBeanPostProcessor(BeanOverrideRegistrar registrar) {
-		this.overrideRegistrar = registrar;
+	WrapEarlyBeanPostProcessor(BeanOverrideRegistry beanOverrideRegistry) {
+		this.beanOverrideRegistry = beanOverrideRegistry;
 	}
 
 	@Override
@@ -56,7 +56,7 @@ class WrapEarlyBeanPostProcessor implements SmartInstantiationAwareBeanPostProce
 			return bean;
 		}
 		this.earlyReferences.put(getCacheKey(bean, beanName), bean);
-		return this.overrideRegistrar.wrapIfNecessary(bean, beanName);
+		return this.beanOverrideRegistry.wrapBeanIfNecessary(bean, beanName);
 	}
 
 	@Override
@@ -65,7 +65,7 @@ class WrapEarlyBeanPostProcessor implements SmartInstantiationAwareBeanPostProce
 			return bean;
 		}
 		if (this.earlyReferences.remove(getCacheKey(bean, beanName)) != bean) {
-			return this.overrideRegistrar.wrapIfNecessary(bean, beanName);
+			return this.beanOverrideRegistry.wrapBeanIfNecessary(bean, beanName);
 		}
 		return bean;
 	}

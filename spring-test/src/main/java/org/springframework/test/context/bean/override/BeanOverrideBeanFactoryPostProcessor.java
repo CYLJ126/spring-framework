@@ -35,6 +35,7 @@ import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultBeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.aot.AbstractAotProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
@@ -46,12 +47,12 @@ import org.springframework.util.Assert;
  * accordingly.
  *
  * <p>For each override, the bean factory is prepared according to the chosen
- * {@linkplain BeanOverrideStrategy override strategy}. The override value is created,
- * if necessary, and the necessary infrastructure is updated to allow the value
- * to be injected in the corresponding {@linkplain OverrideMetadata#getField() field}
- * of the test class.
+ * {@linkplain BeanOverrideStrategy override strategy}. The bean override instance
+ * is created, if necessary, and the related infrastructure is updated to allow
+ * the bean override instance to be injected into the corresponding
+ * {@linkplain BeanOverrideHandler#getField() field} of the test class.
  *
- * <p>This processor does not work against a particular test class, but rather
+ * <p>This processor does not work against a particular test class but rather
  * only prepares the bean factory for the identified, unique set of bean overrides.
  *
  * @author Simon Baslé
@@ -61,26 +62,27 @@ import org.springframework.util.Assert;
  */
 class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, Ordered {
 
+	private static final String PSEUDO_BEAN_NAME_PLACEHOLDER = "<<< PSEUDO BEAN NAME PLACEHOLDER >>>";
+
 	private static final BeanNameGenerator beanNameGenerator = DefaultBeanNameGenerator.INSTANCE;
 
-	private final Set<OverrideMetadata> metadata;
+	private final Set<BeanOverrideHandler> beanOverrideHandlers;
 
-	private final BeanOverrideRegistrar overrideRegistrar;
+	private final BeanOverrideRegistry beanOverrideRegistry;
 
 
 	/**
 	 * Create a new {@code BeanOverrideBeanFactoryPostProcessor} with the supplied
-	 * set of {@link OverrideMetadata} to process, using the given
-	 * {@link BeanOverrideRegistrar}.
-	 * @param metadata the {@link OverrideMetadata} instances to process
-	 * @param overrideRegistrar the {@code BeanOverrideRegistrar} used to track
-	 * metadata
+	 * set of {@link BeanOverrideHandler BeanOverrideHandlers} to process, using
+	 * the given {@link BeanOverrideRegistry}.
+	 * @param beanOverrideHandlers the bean override handlers to process
+	 * @param beanOverrideRegistry the registry used to track bean override handlers
 	 */
-	public BeanOverrideBeanFactoryPostProcessor(Set<OverrideMetadata> metadata,
-			BeanOverrideRegistrar overrideRegistrar) {
+	BeanOverrideBeanFactoryPostProcessor(Set<BeanOverrideHandler> beanOverrideHandlers,
+			BeanOverrideRegistry beanOverrideRegistry) {
 
-		this.metadata = metadata;
-		this.overrideRegistrar = overrideRegistrar;
+		this.beanOverrideHandlers = beanOverrideHandlers;
+		this.beanOverrideRegistry = beanOverrideRegistry;
 	}
 
 
@@ -91,143 +93,191 @@ class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, 
 
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-		for (OverrideMetadata metadata : this.metadata) {
-			registerBeanOverride(beanFactory, metadata);
+		for (BeanOverrideHandler handler : this.beanOverrideHandlers) {
+			registerBeanOverride(beanFactory, handler);
 		}
 	}
 
-	private void registerBeanOverride(ConfigurableListableBeanFactory beanFactory, OverrideMetadata overrideMetadata) {
-		switch (overrideMetadata.getStrategy()) {
-			case REPLACE_DEFINITION -> replaceDefinition(beanFactory, overrideMetadata, true);
-			case REPLACE_OR_CREATE_DEFINITION -> replaceDefinition(beanFactory, overrideMetadata, false);
-			case WRAP_BEAN -> wrapBean(beanFactory, overrideMetadata);
+	private void registerBeanOverride(ConfigurableListableBeanFactory beanFactory, BeanOverrideHandler handler) {
+		String beanName = handler.getBeanName();
+		Field field = handler.getField();
+		Assert.state(!BeanFactoryUtils.isFactoryDereference(beanName),() -> """
+				Unable to override bean '%s' for field '%s.%s': a FactoryBean cannot be overridden. \
+				To override the bean created by the FactoryBean, remove the '&' prefix.""".formatted(
+					beanName, field.getDeclaringClass().getSimpleName(), field.getName()));
+
+		switch (handler.getStrategy()) {
+			case REPLACE -> replaceOrCreateBean(beanFactory, handler, true);
+			case REPLACE_OR_CREATE -> replaceOrCreateBean(beanFactory, handler, false);
+			case WRAP -> wrapBean(beanFactory, handler);
 		}
 	}
 
-	private void replaceDefinition(ConfigurableListableBeanFactory beanFactory, OverrideMetadata overrideMetadata,
-			boolean enforceExistingDefinition) {
+	private void replaceOrCreateBean(ConfigurableListableBeanFactory beanFactory, BeanOverrideHandler handler,
+			boolean requireExistingBean) {
 
-		if (!(beanFactory instanceof BeanDefinitionRegistry registry)) {
-			throw new IllegalStateException("Cannot process bean override with a BeanFactory " +
-					"that doesn't implement BeanDefinitionRegistry: " + beanFactory.getClass());
-		}
+		// NOTE: This method supports 3 distinct scenarios which must be accounted for.
+		//
+		// 1) JVM runtime
+		// 2) AOT processing
+		// 3) AOT runtime
 
-		// The following is a "pseudo" bean definition which MUST NOT be used to
-		// create an actual bean instance.
-		RootBeanDefinition pseudoBeanDefinition = createPseudoBeanDefinition(overrideMetadata);
-		String beanName = overrideMetadata.getBeanName();
-		String beanNameIncludingFactory;
+		String beanName = handler.getBeanName();
 		BeanDefinition existingBeanDefinition = null;
 		if (beanName == null) {
-			beanNameIncludingFactory = getBeanNameForType(beanFactory, overrideMetadata, enforceExistingDefinition);
-			if (beanNameIncludingFactory == null) {
-				beanNameIncludingFactory = beanNameGenerator.generateBeanName(pseudoBeanDefinition, registry);
+			beanName = getBeanNameForType(beanFactory, handler, requireExistingBean);
+			if (beanName != null) {
+				// We are overriding an existing bean by-type.
+				beanName = BeanFactoryUtils.transformedBeanName(beanName);
+				// If we are overriding a manually registered singleton, we won't find
+				// an existing bean definition.
+				if (beanFactory.containsBeanDefinition(beanName)) {
+					existingBeanDefinition = beanFactory.getBeanDefinition(beanName);
+				}
 			}
-			beanName = BeanFactoryUtils.transformedBeanName(beanNameIncludingFactory);
-			if (beanFactory.containsBeanDefinition(beanName)) {
-				existingBeanDefinition = beanFactory.getBeanDefinition(beanName);
+			else {
+				// We will later generate a name for the nonexistent bean, but since NullAway
+				// will reject leaving the beanName set to null, we set it to a placeholder.
+				beanName = PSEUDO_BEAN_NAME_PLACEHOLDER;
 			}
 		}
 		else {
-			Set<String> candidates = getExistingBeanNamesByType(beanFactory, overrideMetadata, false);
+			Set<String> candidates = getExistingBeanNamesByType(beanFactory, handler, false);
 			if (candidates.contains(beanName)) {
+				// We are overriding an existing bean by-name.
 				existingBeanDefinition = beanFactory.getBeanDefinition(beanName);
 			}
-			else if (enforceExistingDefinition) {
+			else if (requireExistingBean) {
 				throw new IllegalStateException("""
-						Unable to override bean: there is no bean definition to replace \
+						Unable to override bean: there is no bean to replace \
 						with name [%s] and type [%s]."""
-							.formatted(beanName, overrideMetadata.getBeanType()));
+							.formatted(beanName, handler.getBeanType()));
 			}
-			beanNameIncludingFactory = beanName;
 		}
 
 		if (existingBeanDefinition != null) {
-			// Validate existing bean definition.
+			// Validate the existing bean definition.
+			//
+			// Applies during "JVM runtime", "AOT processing", and "AOT runtime".
 			validateBeanDefinition(beanFactory, beanName);
 		}
+		else if (Boolean.getBoolean(AbstractAotProcessor.AOT_PROCESSING)) {
+			// There was no existing bean definition, but during "AOT processing" we
+			// do not register the "pseudo" bean definition since our AOT support
+			// cannot automatically convert that to a functional bean definition for
+			// use at "AOT runtime". Furthermore, by not registering a bean definition
+			// for a nonexistent bean, we allow the "JVM runtime" and "AOT runtime"
+			// to operate the same in the following else-block.
+		}
 		else {
-			// There was no existing bean definition, so we register the pseudo bean definition
-			// to ensure that a bean definition exists for the given bean name.
+			// There was no existing bean definition, so we register a "pseudo" bean
+			// definition to ensure that a suitable bean definition exists for the given
+			// bean name for proper autowiring candidate resolution.
+			//
+			// Applies during "JVM runtime" and "AOT runtime".
+
+			if (!(beanFactory instanceof BeanDefinitionRegistry registry)) {
+				throw new IllegalStateException("Cannot process bean override with a BeanFactory " +
+						"that doesn't implement BeanDefinitionRegistry: " + beanFactory.getClass().getName());
+			}
+
+			RootBeanDefinition pseudoBeanDefinition = createPseudoBeanDefinition(handler);
+
+			// Generate a name for the nonexistent bean.
+			if (PSEUDO_BEAN_NAME_PLACEHOLDER.equals(beanName)) {
+				beanName = beanNameGenerator.generateBeanName(pseudoBeanDefinition, registry);
+			}
+
 			registry.registerBeanDefinition(beanName, pseudoBeanDefinition);
 		}
 
-		Object override = overrideMetadata.createOverride(beanName, existingBeanDefinition, null);
-		overrideMetadata.track(override, beanFactory);
-		this.overrideRegistrar.registerNameForMetadata(overrideMetadata, beanNameIncludingFactory);
+		Object override = handler.createOverrideInstance(beanName, existingBeanDefinition, null, beanFactory);
+		this.beanOverrideRegistry.registerBeanOverrideHandler(handler, beanName);
 
-		// Now we have an instance (the override) that we can register. At this stage, we don't
-		// expect a singleton instance to be present. If for some reason a singleton instance
-		// already exists, the following will throw an exception.
+		// Now we have an instance (the override) that we can manually register as a singleton.
+		//
+		// However, we need to remove any existing singleton instance -- for example, a
+		// manually registered singleton or a singleton that was registered as a side effect
+		// of the isSingleton() check in validateBeanDefinition().
+		//
+		// As a bonus, by manually registering a singleton during "AOT processing", we allow
+		// GenericApplicationContext's preDetermineBeanType() method to transparently register
+		// runtime hints for a proxy generated by the above createOverrideInstance() invocation --
+		// for example, when @MockitoBean creates a mock based on a JDK dynamic proxy.
+		if (beanFactory.containsSingleton(beanName)) {
+			destroySingleton(beanFactory, beanName);
+		}
 		beanFactory.registerSingleton(beanName, override);
 	}
 
 	/**
-	 * Check that the expected bean name is registered and matches the type to override.
-	 * <p>If so, put the override metadata in the early tracking map.
+	 * Check that a bean with the specified {@link BeanOverrideHandler#getBeanName() name}
+	 * and {@link BeanOverrideHandler#getBeanType() type} is registered.
+	 * <p>If so, put the {@link BeanOverrideHandler} in the early tracking map.
 	 * <p>The map will later be checked to see if a given bean should be wrapped
-	 * upon creation, during the {@link WrapEarlyBeanPostProcessor#getEarlyBeanReference(Object, String)}
+	 * upon creation, during the {@link WrapEarlyBeanPostProcessor#getEarlyBeanReference}
 	 * phase.
 	 */
-	private void wrapBean(ConfigurableListableBeanFactory beanFactory, OverrideMetadata overrideMetadata) {
-		String beanName = overrideMetadata.getBeanName();
+	private void wrapBean(ConfigurableListableBeanFactory beanFactory, BeanOverrideHandler handler) {
+		String beanName = handler.getBeanName();
 		if (beanName == null) {
-			Set<String> candidateNames = getExistingBeanNamesByType(beanFactory, overrideMetadata, true);
+			Set<String> candidateNames = getExistingBeanNamesByType(beanFactory, handler, true);
 			int candidateCount = candidateNames.size();
 			if (candidateCount != 1) {
-				Field field = overrideMetadata.getField();
-				throw new IllegalStateException("Unable to select a bean to override by wrapping: found " +
-						candidateCount + " bean instances of type " + overrideMetadata.getBeanType() +
-						" (as required by annotated field '" + field.getDeclaringClass().getSimpleName() +
-						"." + field.getName() + "')" + (candidateCount > 0 ? ": " + candidateNames : ""));
+				Field field = handler.getField();
+				throw new IllegalStateException("""
+						Unable to select a bean to override by wrapping: found %d bean instances of type %s \
+						(as required by annotated field '%s.%s')%s"""
+						.formatted(candidateCount, handler.getBeanType(),
+							field.getDeclaringClass().getSimpleName(), field.getName(),
+							(candidateCount > 0 ? ": " + candidateNames : "")));
 			}
 			beanName = BeanFactoryUtils.transformedBeanName(candidateNames.iterator().next());
 		}
 		else {
-			Set<String> candidates = getExistingBeanNamesByType(beanFactory, overrideMetadata, false);
+			Set<String> candidates = getExistingBeanNamesByType(beanFactory, handler, false);
 			if (!candidates.contains(beanName)) {
 				throw new IllegalStateException("""
-						Unable to override bean by wrapping: there is no existing bean definition \
+						Unable to override bean by wrapping: there is no existing bean \
 						with name [%s] and type [%s]."""
-							.formatted(beanName, overrideMetadata.getBeanType()));
+							.formatted(beanName, handler.getBeanType()));
 			}
 		}
 		validateBeanDefinition(beanFactory, beanName);
-		this.overrideRegistrar.markWrapEarly(overrideMetadata, beanName);
-		this.overrideRegistrar.registerNameForMetadata(overrideMetadata, beanName);
+		this.beanOverrideRegistry.registerBeanOverrideHandler(handler, beanName);
 	}
 
 	@Nullable
-	private String getBeanNameForType(ConfigurableListableBeanFactory beanFactory, OverrideMetadata overrideMetadata,
-			boolean enforceExistingDefinition) {
+	private String getBeanNameForType(ConfigurableListableBeanFactory beanFactory, BeanOverrideHandler handler,
+			boolean requireExistingBean) {
 
-		Set<String> candidateNames = getExistingBeanNamesByType(beanFactory, overrideMetadata, true);
+		Set<String> candidateNames = getExistingBeanNamesByType(beanFactory, handler, true);
 		int candidateCount = candidateNames.size();
 		if (candidateCount == 1) {
 			return candidateNames.iterator().next();
 		}
 		else if (candidateCount == 0) {
-			if (enforceExistingDefinition) {
-				Field field = overrideMetadata.getField();
+			if (requireExistingBean) {
+				Field field = handler.getField();
 				throw new IllegalStateException(
-						"Unable to override bean: no bean definitions of type %s (as required by annotated field '%s.%s')"
-							.formatted(overrideMetadata.getBeanType(), field.getDeclaringClass().getSimpleName(), field.getName()));
+						"Unable to override bean: no beans of type %s (as required by annotated field '%s.%s')"
+							.formatted(handler.getBeanType(), field.getDeclaringClass().getSimpleName(), field.getName()));
 			}
 			return null;
 		}
 
-		Field field = overrideMetadata.getField();
+		Field field = handler.getField();
 		throw new IllegalStateException("""
-				Unable to select a bean definition to override: found %s bean definitions of type %s \
+				Unable to select a bean to override: found %s beans of type %s \
 				(as required by annotated field '%s.%s'): %s"""
-					.formatted(candidateCount, overrideMetadata.getBeanType(), field.getDeclaringClass().getSimpleName(),
+					.formatted(candidateCount, handler.getBeanType(), field.getDeclaringClass().getSimpleName(),
 						field.getName(), candidateNames));
 	}
 
-	private Set<String> getExistingBeanNamesByType(ConfigurableListableBeanFactory beanFactory, OverrideMetadata metadata,
+	private Set<String> getExistingBeanNamesByType(ConfigurableListableBeanFactory beanFactory, BeanOverrideHandler handler,
 			boolean checkAutowiredCandidate) {
 
-		ResolvableType resolvableType = metadata.getBeanType();
+		ResolvableType resolvableType = handler.getBeanType();
 		Class<?> type = resolvableType.toClass();
 
 		// Start with matching bean names for type, excluding FactoryBeans.
@@ -246,7 +296,7 @@ class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, 
 
 		// Filter out non-matching autowire candidates.
 		if (checkAutowiredCandidate) {
-			DependencyDescriptor descriptor = new DependencyDescriptor(metadata.getField(), true);
+			DependencyDescriptor descriptor = new DependencyDescriptor(handler.getField(), true);
 			beanNames.removeIf(beanName -> !beanFactory.isAutowireCandidate(beanName, descriptor));
 		}
 		// Filter out scoped proxy targets.
@@ -254,7 +304,7 @@ class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, 
 
 		// In case of multiple matches, fall back on the field's name as a last resort.
 		if (beanNames.size() > 1) {
-			String fieldName = metadata.getField().getName();
+			String fieldName = handler.getField().getName();
 			if (beanNames.contains(fieldName)) {
 				return Set.of(fieldName);
 			}
@@ -263,21 +313,21 @@ class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, 
 	}
 
 	/**
-	 * Create a pseudo-{@link BeanDefinition} for the supplied {@link OverrideMetadata},
+	 * Create a pseudo-{@link BeanDefinition} for the supplied {@link BeanOverrideHandler},
 	 * whose {@linkplain RootBeanDefinition#getTargetType() target type} and
 	 * {@linkplain RootBeanDefinition#getQualifiedElement() qualified element} are
-	 * the {@linkplain OverrideMetadata#getBeanType() bean type} and
-	 * the {@linkplain OverrideMetadata#getField() field} of the {@code OverrideMetadata},
+	 * the {@linkplain BeanOverrideHandler#getBeanType() bean type} and
+	 * the {@linkplain BeanOverrideHandler#getField() field} of the {@code BeanOverrideHandler},
 	 * respectively.
 	 * <p>The returned bean definition should <strong>not</strong> be used to create
 	 * a bean instance but rather only for the purpose of having suitable bean
 	 * definition metadata available in the {@link BeanFactory} &mdash; for example,
 	 * for autowiring candidate resolution.
 	 */
-	private static RootBeanDefinition createPseudoBeanDefinition(OverrideMetadata metadata) {
-		RootBeanDefinition definition = new RootBeanDefinition(metadata.getBeanType().resolve());
-		definition.setTargetType(metadata.getBeanType());
-		definition.setQualifiedElement(metadata.getField());
+	private static RootBeanDefinition createPseudoBeanDefinition(BeanOverrideHandler handler) {
+		RootBeanDefinition definition = new RootBeanDefinition(handler.getBeanType().resolve());
+		definition.setTargetType(handler.getBeanType());
+		definition.setQualifiedElement(handler.getField());
 		return definition;
 	}
 
@@ -288,13 +338,14 @@ class BeanOverrideBeanFactoryPostProcessor implements BeanFactoryPostProcessor, 
 	private static void validateBeanDefinition(ConfigurableListableBeanFactory beanFactory, String beanName) {
 		Assert.state(beanFactory.isSingleton(beanName),
 				() -> "Unable to override bean '" + beanName + "': only singleton beans can be overridden.");
+	}
 
-		// Since the isSingleton() check above may have registered a singleton as a side
-		// effect -- for example, for a FactoryBean -- we need to destroy the singleton,
-		// because we later manually register a bean override instance as a singleton.
-		if (beanFactory instanceof DefaultListableBeanFactory dlbf) {
-			dlbf.destroySingleton(beanName);
+	private static void destroySingleton(ConfigurableListableBeanFactory beanFactory, String beanName) {
+		if (!(beanFactory instanceof DefaultListableBeanFactory dlbf)) {
+			throw new IllegalStateException("Cannot process bean override with a BeanFactory " +
+					"that doesn't implement DefaultListableBeanFactory: " + beanFactory.getClass().getName());
 		}
+		dlbf.destroySingleton(beanName);
 	}
 
 }

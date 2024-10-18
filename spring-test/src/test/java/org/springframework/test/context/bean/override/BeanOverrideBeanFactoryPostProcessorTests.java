@@ -48,13 +48,25 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Tests for {@link BeanOverrideBeanFactoryPostProcessor} combined with a
- * {@link BeanOverrideRegistrar}.
+ * {@link BeanOverrideRegistry}.
  *
  * @author Simon Baslé
  * @author Stephane Nicoll
  * @author Sam Brannen
  */
 class BeanOverrideBeanFactoryPostProcessorTests {
+
+	@Test
+	void beanNameWithFactoryBeanPrefixIsRejected() {
+		AnnotationConfigApplicationContext context = createContext(FactoryBeanPrefixTestCase.class);
+
+		assertThatIllegalStateException()
+				.isThrownBy(context::refresh)
+				.withMessage("""
+					Unable to override bean '&messageService' for field 'FactoryBeanPrefixTestCase.messageService': \
+					a FactoryBean cannot be overridden. To override the bean created by the FactoryBean, remove the \
+					'&' prefix.""");
+	}
 
 	@Test
 	void replaceBeanByNameWithMatchingBeanDefinition() {
@@ -71,7 +83,7 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 		assertThatIllegalStateException()
 				.isThrownBy(context::refresh)
-				.withMessage("Unable to override bean: there is no bean definition " +
+				.withMessage("Unable to override bean: there is no bean " +
 						"to replace with name [descriptionBean] and type [java.lang.String].");
 	}
 
@@ -82,7 +94,7 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 		assertThatIllegalStateException()
 				.isThrownBy(context::refresh)
-				.withMessage("Unable to override bean: there is no bean definition " +
+				.withMessage("Unable to override bean: there is no bean " +
 						"to replace with name [descriptionBean] and type [java.lang.String].");
 	}
 
@@ -128,7 +140,7 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 		assertThatIllegalStateException()
 				.isThrownBy(context::refresh)
-				.withMessage("Unable to override bean: no bean definitions of type java.lang.Integer " +
+				.withMessage("Unable to override bean: no beans of type java.lang.Integer " +
 						"(as required by annotated field 'CaseByType.counter')");
 	}
 
@@ -140,7 +152,7 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 		assertThatIllegalStateException()
 				.isThrownBy(context::refresh)
-				.withMessage("Unable to select a bean definition to override: found 2 bean definitions " +
+				.withMessage("Unable to select a bean to override: found 2 beans " +
 						"of type java.lang.Integer (as required by annotated field 'CaseByType.counter'): " +
 						"[someInteger, anotherInteger]");
 	}
@@ -342,11 +354,23 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 	private AnnotationConfigApplicationContext createContext(Class<?> testClass) {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		Set<OverrideMetadata> metadata = new LinkedHashSet<>(OverrideMetadata.forTestClass(testClass));
-		new BeanOverrideContextCustomizer(metadata).customizeContext(context, mock(MergedContextConfiguration.class));
+		Set<BeanOverrideHandler> handlers = new LinkedHashSet<>(BeanOverrideHandler.forTestClass(testClass));
+		new BeanOverrideContextCustomizer(handlers).customizeContext(context, mock(MergedContextConfiguration.class));
 		return context;
 	}
 
+
+	@FunctionalInterface
+	interface MessageService {
+		String getMessage();
+	}
+
+	static class FactoryBeanPrefixTestCase {
+
+		@DummyBean(beanName = "&messageService")
+		MessageService messageService;
+
+	}
 
 	static class CaseByName {
 
@@ -364,24 +388,24 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 
 	static class CaseByNameWithReplaceOrCreateStrategy {
 
-		@DummyBean(beanName = "descriptionBean", strategy = BeanOverrideStrategy.REPLACE_OR_CREATE_DEFINITION)
+		@DummyBean(beanName = "descriptionBean", strategy = BeanOverrideStrategy.REPLACE_OR_CREATE)
 		private String description;
 
 	}
 
 	static class CaseByTypeWithReplaceOrCreateStrategy {
 
-		@DummyBean(strategy = BeanOverrideStrategy.REPLACE_OR_CREATE_DEFINITION)
+		@DummyBean(strategy = BeanOverrideStrategy.REPLACE_OR_CREATE)
 		private String description;
 
 	}
 
 	static class CaseByNameAndByTypeWithReplaceOrCreateStrategy {
 
-		@DummyBean(beanName = "descriptionBean", strategy = BeanOverrideStrategy.REPLACE_OR_CREATE_DEFINITION)
+		@DummyBean(beanName = "descriptionBean", strategy = BeanOverrideStrategy.REPLACE_OR_CREATE)
 		private String description;
 
-		@DummyBean(strategy = BeanOverrideStrategy.REPLACE_OR_CREATE_DEFINITION)
+		@DummyBean(strategy = BeanOverrideStrategy.REPLACE_OR_CREATE)
 		private Integer counter;
 
 	}
@@ -396,7 +420,7 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 	static class CaseByNameWithQualifier {
 
 		@Qualifier("preferThis")
-		@TestBean(name = "descriptionBean", enforceOverride = false)
+		@TestBean(name = "descriptionBean")
 		private String description;
 
 		static String descriptionBean() {
@@ -462,11 +486,6 @@ class BeanOverrideBeanFactoryPostProcessorTests {
 		public boolean isSingleton() {
 			return false;
 		}
-	}
-
-	@FunctionalInterface
-	interface MessageService {
-		String getMessage();
 	}
 
 	static class MessageServiceTestCase {
