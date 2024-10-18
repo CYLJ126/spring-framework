@@ -21,22 +21,31 @@ import org.springframework.util.Assert;
 
 /**
  * A simple holder for a given bean name plus bean instance.
+ * 给定 bean 名称和 bean 实例的简单持有者。
  *
- * @author Juergen Hoeller
- * @since 4.3.3
  * @param <T> the bean type
+ * @author Juergen Hoeller
  * @see AutowireCapableBeanFactory#resolveNamedBean(Class)
+ * @since 4.3.3
  */
 public class NamedBeanHolder<T> implements NamedBean {
 
+	/**
+	 * bean 名
+	 */
 	private final String beanName;
 
+	/**
+	 * bean 实例
+	 */
 	private final T beanInstance;
 
 
 	/**
 	 * Create a new holder for the given bean name plus instance.
-	 * @param beanName the name of the bean
+	 * 构造器，通过给定名称和实例，创建一个具名 bean 持有者。
+	 *
+	 * @param beanName     the name of the bean
 	 * @param beanInstance the corresponding bean instance
 	 */
 	public NamedBeanHolder(String beanName, T beanInstance) {
@@ -48,6 +57,7 @@ public class NamedBeanHolder<T> implements NamedBean {
 
 	/**
 	 * Return the name of the bean.
+	 * 返回 bean 名。
 	 */
 	@Override
 	public String getBeanName() {
@@ -56,6 +66,7 @@ public class NamedBeanHolder<T> implements NamedBean {
 
 	/**
 	 * Return the corresponding bean instance.
+	 * 返回 bean 实例。
 	 */
 	public T getBeanInstance() {
 		return this.beanInstance;

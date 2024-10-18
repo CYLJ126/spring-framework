@@ -16,19 +16,20 @@
 
 package org.springframework.core;
 
-import java.util.function.Supplier;
-
 import org.springframework.util.Assert;
+
+import java.util.function.Supplier;
 
 /**
  * {@link ThreadLocal} subclass that exposes a specified name
  * as {@link #toString()} result (allowing for introspection).
+ * ThreadLocal的子类，以 toString() 的结果暴露了一个指定的名字（以允许内省检查）。
  *
+ * @param <T> the value type
  * @author Juergen Hoeller
  * @author Qimiao Chen
- * @since 2.5.2
- * @param <T> the value type
  * @see NamedInheritableThreadLocal
+ * @since 2.5.2
  */
 public class NamedThreadLocal<T> extends ThreadLocal<T> {
 
@@ -37,6 +38,8 @@ public class NamedThreadLocal<T> extends ThreadLocal<T> {
 
 	/**
 	 * Create a new NamedThreadLocal with the given name.
+	 * 构造器。
+	 *
 	 * @param name a descriptive name for this ThreadLocal
 	 */
 	public NamedThreadLocal(String name) {
@@ -53,8 +56,10 @@ public class NamedThreadLocal<T> extends ThreadLocal<T> {
 	/**
 	 * Create a named thread local variable. The initial value of the variable is
 	 * determined by invoking the {@code get} method on the {@code Supplier}.
-	 * @param <S> the type of the named thread local's value
-	 * @param name a descriptive name for the thread local
+	 * 创建一个线程本地变量，初始值通过入参 Supplier 确定。
+	 *
+	 * @param <S>      the type of the named thread local's value
+	 * @param name     a descriptive name for the thread local
 	 * @param supplier the supplier to be used to determine the initial value
 	 * @return a new named thread local
 	 * @since 6.1
@@ -67,6 +72,8 @@ public class NamedThreadLocal<T> extends ThreadLocal<T> {
 	/**
 	 * An extension of NamedThreadLocal that obtains its initial value from
 	 * the specified {@code Supplier}.
+	 * NamedThreadLocal 的扩展，包含了来自 Supplier 的初始值。
+	 *
 	 * @param <T> the type of the named thread local's value
 	 */
 	private static final class SuppliedNamedThreadLocal<T> extends NamedThreadLocal<T> {

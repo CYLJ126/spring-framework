@@ -16,45 +16,32 @@
 
 package org.springframework.core;
 
-import java.io.Serializable;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.lang.reflect.WildcardType;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.StringJoiner;
-
 import org.springframework.core.SerializableTypeWrapper.FieldTypeProvider;
 import org.springframework.core.SerializableTypeWrapper.MethodParameterTypeProvider;
 import org.springframework.core.SerializableTypeWrapper.TypeProvider;
 import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
+
+import java.io.Serializable;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * Encapsulates a Java {@link java.lang.reflect.Type}, providing access to
  * {@link #getSuperType() supertypes}, {@link #getInterfaces() interfaces}, and
  * {@link #getGeneric(int...) generic parameters} along with the ability to ultimately
  * {@link #resolve() resolve} to a {@link java.lang.Class}.
+ * 包装一个 Java 反射类型 java.lang.reflect.Type，通过 getSuperType() 提供对超类的获取，
+ * 通过 getInterfaces() 获取接口，通过 #getGeneric(int...) 获取泛型参数，这些方法最终都是通过
+ * #resolve() 解析为一个 Java 类型 java.lang.Class。
  *
  * <p>A {@code ResolvableType} may be obtained from a {@linkplain #forField(Field) field},
  * a {@linkplain #forMethodParameter(Method, int) method parameter},
  * a {@linkplain #forMethodReturnType(Method) method return type}, or a
  * {@linkplain #forClass(Class) class}. Most methods on this class will themselves return
  * a {@code ResolvableType}, allowing for easy navigation. For example:
+ * ResolvableType 实例可以从 forField(Field)、forMethodParameter(Method, int)、forMethodReturnType(Method)、
+ * forClass(Class)获得。该类中的大部分方法都是返回一个 ResolvableType 实例，允许轻松导航。如：
  * <pre class="code">
  * private HashMap&lt;Integer, List&lt;String&gt;&gt; myMap;
  *
@@ -87,58 +74,57 @@ import org.springframework.util.StringUtils;
 public class ResolvableType implements Serializable {
 
 	/**
-	 * {@code ResolvableType} returned when no value is available. {@code NONE} is used
-	 * in preference to {@code null} so that multiple method calls can be safely chained.
+	 * 无值可访问时返回的 ResolvableType 类型，用于对 null 的表示，以在多方法时，可以安全的链式调用。
 	 */
 	public static final ResolvableType NONE = new ResolvableType(EmptyType.INSTANCE, null, null, 0);
 
+	/** 用于 ResolvableType 空结果数组时返回 */
 	private static final ResolvableType[] EMPTY_TYPES_ARRAY = new ResolvableType[0];
 
+	/**
+	 * 静态变量，用于缓存完全相同的类型的 ResolvableType 实例，重写了 equals()，只要Type、TypeProvider、VariableResolver三个属性
+	 * 相同，则认为是同一实例。
+	 */
 	private static final ConcurrentReferenceHashMap<ResolvableType, ResolvableType> cache =
 			new ConcurrentReferenceHashMap<>(256);
 
-
-	/**
-	 * The underlying Java type being managed.
-	 */
+	/** 被管理的底层Java类型 */
 	private final Type type;
 
-	/**
-	 * The component type for an array or {@code null} if the type should be deduced.
-	 */
+	/** 数组或null的元素类型，如果这个类型是可推导的 */
 	@Nullable
 	private final ResolvableType componentType;
 
-	/**
-	 * Optional provider for the type.
-	 */
+	/** 可选的类型提供者 */
 	@Nullable
 	private final TypeProvider typeProvider;
 
-	/**
-	 * The {@code VariableResolver} to use or {@code null} if no resolver is available.
-	 */
+	/** 使用的变量解析器，或为null */
 	@Nullable
 	private final VariableResolver variableResolver;
 
+	/** 该类型的哈希码，通过calculateHashCode()计算得到 */
 	@Nullable
 	private final Integer hash;
 
 	@Nullable
 	private Class<?> resolved;
 
+	/** 父类 */
 	@Nullable
 	private volatile ResolvableType superType;
 
+	/** 接口 */
 	@Nullable
 	private volatile ResolvableType[] interfaces;
 
+	/** 泛型 */
 	@Nullable
 	private volatile ResolvableType[] generics;
 
+	/** 是否有未解析的泛型，即不是具体的Java类型 */
 	@Nullable
 	private volatile Boolean unresolvableGenerics;
-
 
 	/**
 	 * Private constructor used to create a new {@code ResolvableType} for cache key purposes,
