@@ -200,10 +200,13 @@ public interface BeanFactory {
 
 	/**
 	 * Return an instance, which may be shared or independent, of the specified bean.
+	 * 返回指定 bean 的一个实例，可能是共享的，也可能是独立的。
 	 * <p>Allows for specifying explicit constructor arguments / factory method arguments,
 	 * overriding the specified default arguments (if any) in the bean definition.
+	 * 允许指定显式构造参数/工厂方法参数，重写 bean 定义中指定的默认参数（如果有的话）。
 	 * Note that the provided arguments need to match a specific candidate constructor /
 	 * factory method in the order of declared parameters.
+	 * 注意，提供的参数要能匹配指定的候选构造器/工厂方法声明的参数顺序。
 	 *
 	 * @param name the name of the bean to retrieve
 	 * @param args arguments to use when creating a bean instance using explicit arguments
@@ -332,7 +335,7 @@ public interface BeanFactory {
 	/**
 	 * Is this bean a shared singleton? That is, will {@link #getBean} always
 	 * return the same instance?
-	 * 判断该bean是否是一个共享单例，即getBean()总是返回同一实例。
+	 * 判断该bean是否是一个共享单例，即 getBean() 总是返回同一实例。
 	 * <p>Note: This method returning {@code false} does not clearly indicate
 	 * independent instances. It indicates non-singleton instances, which may correspond
 	 * to a scoped bean as well. Use the {@link #isPrototype} operation to explicitly
@@ -402,8 +405,12 @@ public interface BeanFactory {
 	 * Check whether the bean with the given name matches the specified type.
 	 * More specifically, check whether a {@link #getBean} call for the given name
 	 * would return an object that is assignable to the specified target type.
+	 * 判断给定 bean 是否与给定类型匹配。更具体一点地说，检查使用一个给定名字对 getBean() 的调用，
+	 * 是否返回与指定类型匹配的对象。
 	 * <p>Translates aliases back to the corresponding canonical bean name.
+	 * 如果给定名是一个别名，则会翻译成对应的规范的 bean 名。
 	 * <p>Will ask the parent factory if the bean cannot be found in this factory instance.
+	 * 如果工厂有继承层次，则在当前工厂实例中找不到时会查找所有父工厂。
 	 *
 	 * @param name        the name of the bean to query
 	 * @param typeToMatch the type to match against (as a {@code Class})
