@@ -821,7 +821,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		// Actually destroy the bean now...
 		if (bean != null) {
 			try {
-				// 实际销毁给定的 bean
+				// 实际销毁给定的 bean（如果是一个 FactoryBean，则销毁方法其实是被代理给了 DisposableBean 接口的实现）
 				bean.destroy();
 			} catch (Throwable ex) {
 				if (logger.isWarnEnabled()) {
