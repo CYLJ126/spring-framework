@@ -18,6 +18,7 @@ package org.springframework.context;
 
 /**
  * Strategy interface for processing Lifecycle beans within the ApplicationContext.
+ * 用于在 ApplicationContext 中处理 Lifecycle bean 的策略接口。
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
@@ -27,11 +28,13 @@ public interface LifecycleProcessor extends Lifecycle {
 
 	/**
 	 * Notification of context refresh, for example, for auto-starting components.
+	 * 上下文刷新通知，如用于自动启动组件。
 	 */
 	void onRefresh();
 
 	/**
 	 * Notification of context close phase, for example, for auto-stopping components.
+	 * 上下文关闭阶段的通知，如用于自动停止组件。
 	 */
 	void onClose();
 
