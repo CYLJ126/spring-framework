@@ -283,7 +283,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
-				// bean 是否在创建当中
+				// 单例 bean 是否在创建当中
 				if (isSingletonCurrentlyInCreation(beanName)) {
 					logger.trace("Returning eagerly cached instance of singleton bean '" + beanName +
 							"' that is not fully initialized yet - a consequence of a circular reference");
@@ -304,7 +304,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			// Check if bean definition exists in this factory.
 			// 检查工厂中是否存在 bean 定义。
 			BeanFactory parentBeanFactory = getParentBeanFactory();
-			// 父工厂不为 null 且当前工厂不包含该 bean 定义，则检查父工厂（向上查找）
+			// 父工厂不为 null 且当前工厂不包含该 bean 定义，则递归检查父工厂（向上查找）
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
 				String nameToLookup = originalBeanName(name);
@@ -351,7 +351,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						// 注册依赖关系
 						registerDependentBean(dep, beanName);
 						try {
-							// 创建依赖 bean
+							// 创建依赖 bean，调用了本方法，先确保依赖的 bean 被创建了
 							getBean(dep);
 						} catch (NoSuchBeanDefinitionException ex) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
@@ -373,6 +373,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// Create bean instance.
 				// 创建 bean
 				if (mbd.isSingleton()) {
+					// 如果是单例
 					// 返回与给定名对应的已注册的原生单例，没有则创建并注册一个新的。lambda 参数为对象工厂 ObjectFactory
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
