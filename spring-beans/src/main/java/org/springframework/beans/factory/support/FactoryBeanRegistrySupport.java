@@ -133,26 +133,28 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
 		// 是单例，且在单例缓存中
 		if (factory.isSingleton() && containsSingleton(beanName)) {
-			Object object = this.factoryBeanObjectCache.get(beanName);
-			// 不存在则创建，并放入缓存
+			this.singletonLock.lock();
+			try {
+				Object object = this.factoryBeanObjectCache.get(beanName);
+				// 不存在则创建，并放入缓存
 			if (object == null) {
 				// 从 FactoryBean 获取 bean
 				object = doGetObjectFromFactoryBean(factory, beanName);
 				// Only post-process and store if not put there already during getObject() call above
 				// (for example, because of circular reference processing triggered by custom getBean calls)
 				// 如果在上面的 getObject() 调用期间没有缓存在 factoryBeanObjectCache，则只进行后置处理和存储（例如，由于自定义 getBean 调用触发了循环引用处理）
-				Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
-				if (alreadyThere != null) {
-					// 如果在这期间已经生成了 bean
+					Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
+					if (alreadyThere != null) {
+						// 如果在这期间已经生成了 bean
 					object = alreadyThere;
-				} else {
+					} else {
 					if (shouldPostProcess) {
 						if (isSingletonCurrentlyInCreation(beanName)) {
 							// Temporarily return non-post-processed object, not storing it yet
 							// 如果 bean 还在创建当中，临时返回一个未做后置处理的对象，且先不缓存它
-							return object;
-						}
-						// 标记该 bean 名为正在创建当中
+								return object;
+							}
+							// 标记该 bean 名为正在创建当中
 						beforeSingletonCreation(beanName);
 						try {
 							// 对 FactoryBean 中的 bean 作后置处理
@@ -160,19 +162,22 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 						} catch (Throwable ex) {
 							throw new BeanCreationException(beanName,
 									"Post-processing of FactoryBean's singleton object failed", ex);
-						} finally {
+							} finally {
 							// 标记该 bean 名为已创建结束
-							afterSingletonCreation(beanName);
+								afterSingletonCreation(beanName);
+							}
 						}
-					}
-					// 如果已在单例缓存中
+						// 如果已在单例缓存中
 					if (containsSingleton(beanName)) {
 						// 放入 FactoryBean 的单例对象缓存中
 						this.factoryBeanObjectCache.put(beanName, object);
 					}
 				}
 			}
-			return object;
+			return object;}
+			finally {
+				this.singletonLock.unlock();
+			}
 		} else {
 			// 不是单例，且不在单例缓存中
 			// 从 FactoryBean 获取 bean

@@ -75,6 +75,14 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	private static final int SUPPRESSED_EXCEPTIONS_LIMIT = 100;
 
+
+	/**
+	 * 单例锁，在注册或创建、销毁单例时，需加锁。
+	 * 按工厂加锁，而不是按单例创建来加锁，是因为创建一个 bean 时，会先创建它依赖的 bean，如果不这样加锁，会有冲突的风险，
+	 * 参见 {@link DefaultSingletonBeanRegistry#getSingleton(String, ObjectFactory)}。
+	 */
+	final Lock singletonLock = new ReentrantLock();
+
 	/**
 	 * Cache of singleton objects: bean name to bean instance.
 	 * 单例缓存映射集，Map<bean 名，bean 实例>
@@ -106,13 +114,6 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * 已注册的单例集合，即按注册顺序存放的 bean 名集合。
 	 */
 	private final Set<String> registeredSingletons = Collections.synchronizedSet(new LinkedHashSet<>(256));
-
-	/**
-	 * 单例锁，在注册或创建、销毁单例时，需加锁。
-	 * 按工厂加锁，而不是按单例创建来加锁，是因为创建一个 bean 时，会先创建它依赖的 bean，如果不这样加锁，会有冲突的风险，
-	 * 参见 {@link DefaultSingletonBeanRegistry#getSingleton(String, ObjectFactory)}。
-	 */
-	private final Lock singletonLock = new ReentrantLock();
 
 	/**
 	 * Names of beans that are currently in creation.

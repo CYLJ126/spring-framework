@@ -124,17 +124,6 @@ public class Indexer extends SpelNodeImpl {
 
 
 	/**
-	 * Create an {@code Indexer} with the given start position, end position, and
-	 * index expression.
-	 * @see #Indexer(boolean, int, int, SpelNodeImpl)
-	 * @deprecated as of Spring Framework 6.2, in favor of {@link #Indexer(boolean, int, int, SpelNodeImpl)}
-	 */
-	@Deprecated(since = "6.2", forRemoval = true)
-	public Indexer(int startPos, int endPos, SpelNodeImpl indexExpression) {
-		this(false, startPos, endPos, indexExpression);
-	}
-
-	/**
 	 * Create an {@code Indexer} with the given null-safe flag, start position,
 	 * end position, and index expression.
 	 * @since 6.2
@@ -253,7 +242,7 @@ public class Indexer extends SpelNodeImpl {
 		// Check for a custom IndexAccessor.
 		EvaluationContext evalContext = state.getEvaluationContext();
 		List<IndexAccessor> accessorsToTry =
-				AstUtils.getAccessorsToTry(target, evalContext.getIndexAccessors());
+				AccessorUtils.getAccessorsToTry(target, evalContext.getIndexAccessors());
 		if (accessMode.supportsReads) {
 			try {
 				for (IndexAccessor indexAccessor : accessorsToTry) {
@@ -754,7 +743,7 @@ public class Indexer extends SpelNodeImpl {
 					Indexer.this.cachedPropertyReadState = null;
 				}
 				List<PropertyAccessor> accessorsToTry =
-						AstUtils.getAccessorsToTry(targetType, this.evaluationContext.getPropertyAccessors());
+						AccessorUtils.getAccessorsToTry(targetType, this.evaluationContext.getPropertyAccessors());
 				for (PropertyAccessor accessor : accessorsToTry) {
 					if (accessor.canRead(this.evaluationContext, this.targetObject, this.name)) {
 						if (accessor instanceof ReflectivePropertyAccessor reflectivePropertyAccessor) {
@@ -797,7 +786,7 @@ public class Indexer extends SpelNodeImpl {
 					Indexer.this.cachedPropertyWriteState = null;
 				}
 				List<PropertyAccessor> accessorsToTry =
-						AstUtils.getAccessorsToTry(targetType, this.evaluationContext.getPropertyAccessors());
+						AccessorUtils.getAccessorsToTry(targetType, this.evaluationContext.getPropertyAccessors());
 				for (PropertyAccessor accessor : accessorsToTry) {
 					if (accessor.canWrite(this.evaluationContext, this.targetObject, this.name)) {
 						accessor.write(this.evaluationContext, this.targetObject, this.name, newValue);
@@ -1014,7 +1003,7 @@ public class Indexer extends SpelNodeImpl {
 					Indexer.this.cachedIndexReadState = null;
 				}
 				List<IndexAccessor> accessorsToTry =
-						AstUtils.getAccessorsToTry(this.target, this.evaluationContext.getIndexAccessors());
+						AccessorUtils.getAccessorsToTry(this.target, this.evaluationContext.getIndexAccessors());
 				for (IndexAccessor indexAccessor : accessorsToTry) {
 					if (indexAccessor.canRead(this.evaluationContext, this.target, this.index)) {
 						TypedValue result = indexAccessor.read(this.evaluationContext, this.target, this.index);
@@ -1069,7 +1058,7 @@ public class Indexer extends SpelNodeImpl {
 					Indexer.this.cachedIndexWriteState = null;
 				}
 				List<IndexAccessor> accessorsToTry =
-						AstUtils.getAccessorsToTry(this.target, this.evaluationContext.getIndexAccessors());
+						AccessorUtils.getAccessorsToTry(this.target, this.evaluationContext.getIndexAccessors());
 				for (IndexAccessor indexAccessor : accessorsToTry) {
 					if (indexAccessor.canWrite(this.evaluationContext, this.target, this.index)) {
 						indexAccessor.write(this.evaluationContext, this.target, this.index, newValue);

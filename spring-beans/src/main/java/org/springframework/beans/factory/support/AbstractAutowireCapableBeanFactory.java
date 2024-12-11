@@ -1086,32 +1086,34 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	@Nullable
 	private FactoryBean<?> getSingletonFactoryBeanForTypeCheck(String beanName, RootBeanDefinition mbd) {
-		// 首先获取 BeanWrapper 缓存
-		BeanWrapper bw = this.factoryBeanInstanceCache.get(beanName);
-		if (bw != null) {
-			// 从 BeanWrapper 中直接返回 FactoryBean
-			return (FactoryBean<?>) bw.getWrappedInstance();
-		}
-		// 获取单例
-		Object beanInstance = getSingleton(beanName, false);
-		if (beanInstance instanceof FactoryBean<?> factoryBean) {
-			// 如果单例是一个 FactoryBean，直接返回
-			return factoryBean;
-		}
-		if (isSingletonCurrentlyInCreation(beanName) ||
-				(mbd.getFactoryBeanName() != null && isSingletonCurrentlyInCreation(mbd.getFactoryBeanName()))) {
-			// 如果 bean 当前正在在创建中，或 bean 定义中的工厂方法不为空且对应的 FactoryBean 正在创建中，则返回 null
-			return null;
-		}
+		this.singletonLock.lock();
+		try {
+			// 首先获取 BeanWrapper 缓存
+			BeanWrapper bw = this.factoryBeanInstanceCache.get(beanName);
+			if (bw != null) {
+				// 从 BeanWrapper 中直接返回 FactoryBean
+				return (FactoryBean<?>) bw.getWrappedInstance();
+			}
+			// 获取单例
+			Object beanInstance = getSingleton(beanName, false);
+			if (beanInstance instanceof FactoryBean<?> factoryBean) {
+				// 如果单例是一个 FactoryBean，直接返回
+				return factoryBean;
+			}
+			if (isSingletonCurrentlyInCreation(beanName) ||
+					(mbd.getFactoryBeanName() != null && isSingletonCurrentlyInCreation(mbd.getFactoryBeanName()))) {
+				// 如果 bean 当前正在在创建中，或 bean 定义中的工厂方法不为空且对应的 FactoryBean 正在创建中，则返回 null
+				return null;
+			}
 
-		// 初始化 bean 逻辑
+			// 初始化 bean 逻辑
 		Object instance;
 		try {
 			// Mark this bean as currently in creation, even if just partially.
 			// 标记 bean 为正在创建中，即使只是部分创建
-			beforeSingletonCreation(beanName);
-			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
-			// 给 BeanPostProcessor 一个返回代理而不是目标 bean 实例的机会
+				beforeSingletonCreation(beanName);
+				// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+				// 给 BeanPostProcessor 一个返回代理而不是目标 bean 实例的机会
 			instance = resolveBeforeInstantiation(beanName, mbd);
 			if (instance == null) {
 				// 创建 bean 实例，返回一个 BeanWrapper 包装对象
@@ -1140,13 +1142,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 注册在创建单例 bean 实例期间产生的被抑制的异常
 			onSuppressedException(ex);
 			return null;
-		} finally {
+			} finally {
 			// Finished partial creation of this bean.
 			// 结束该 bean 的部分创建
 			afterSingletonCreation(beanName);
 		}
 		// 返回对应的 FactoryBean
-		return getFactoryBean(beanName, instance);
+			return getFactoryBean(beanName, instance);
+		}
+		finally {
+			this.singletonLock.unlock();
+		}
 	}
 
 	/**

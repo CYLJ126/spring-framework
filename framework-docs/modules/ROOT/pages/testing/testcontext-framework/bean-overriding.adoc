@@ -2,7 +2,8 @@
 = Bean Overriding in Tests
 
 Bean overriding in tests refers to the ability to override specific beans in the
-`ApplicationContext` for a test class, by annotating one or more fields in the test class.
+`ApplicationContext` for a test class, by annotating one or more non-static fields in the
+test class.
 
 NOTE: This feature is intended as a less risky alternative to the practice of registering
 a bean via `@Bean` with the `DefaultListableBeanFactory`
@@ -41,9 +42,10 @@ The `spring-test` module registers implementations of the latter two
 {spring-framework-code}/spring-test/src/main/resources/META-INF/spring.factories[`META-INF/spring.factories`
 properties file].
 
-The bean overriding infrastructure searches in test classes for any field meta-annotated
-with `@BeanOverride` and instantiates the corresponding `BeanOverrideProcessor` which is
-responsible for creating an appropriate `BeanOverrideHandler`.
+The bean overriding infrastructure searches in test classes for any non-static field that
+is meta-annotated with `@BeanOverride` and instantiates the corresponding
+`BeanOverrideProcessor` which is responsible for creating an appropriate
+`BeanOverrideHandler`.
 
 The internal `BeanOverrideBeanFactoryPostProcessor` then uses bean override handlers to
 alter the test's `ApplicationContext` by creating, replacing, or wrapping beans as
@@ -56,6 +58,19 @@ defined by the corresponding `BeanOverrideStrategy`:
   exist.
 `WRAP`::
   Retrieves the original bean and wraps it.
+
+[TIP]
+====
+Only _singleton_ beans can be overridden. Any attempt to override a non-singleton bean
+will result in an exception.
+
+When replacing a bean created by a `FactoryBean`, the `FactoryBean` itself will be
+replaced with a singleton bean corresponding to bean override instance created by the
+applicable `BeanOverrideHandler`.
+
+When wrapping a bean created by a `FactoryBean`, the object created by the `FactoryBean`
+will be wrapped, not the `FactoryBean` itself.
+====
 
 [NOTE]
 ====
@@ -71,6 +86,3 @@ Alternatively, the user can directly provide the bean name in the custom annotat
 `BeanOverrideProcessor` implementations may also internally compute a bean name based on
 a convention or some other method.
 ====
-
-NOTE: Only _singleton_ beans can be overridden. Any attempt to override a non-singleton
-bean will result in an exception.
