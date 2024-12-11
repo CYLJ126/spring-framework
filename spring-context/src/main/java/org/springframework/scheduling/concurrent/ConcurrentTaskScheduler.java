@@ -41,7 +41,6 @@ import org.springframework.scheduling.support.TaskUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ErrorHandler;
-import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * Adapter that takes a {@code java.util.concurrent.ScheduledExecutorService} and
@@ -217,18 +216,6 @@ public class ConcurrentTaskScheduler extends ConcurrentTaskExecutor implements T
 	@Override
 	public <T> Future<T> submit(Callable<T> task) {
 		return super.submit(new DelegatingErrorHandlingCallable<>(task, this.errorHandler));
-	}
-
-	@SuppressWarnings("deprecation")
-	@Override
-	public ListenableFuture<?> submitListenable(Runnable task) {
-		return super.submitListenable(TaskUtils.decorateTaskWithErrorHandler(task, this.errorHandler, false));
-	}
-
-	@SuppressWarnings("deprecation")
-	@Override
-	public <T> ListenableFuture<T> submitListenable(Callable<T> task) {
-		return super.submitListenable(new DelegatingErrorHandlingCallable<>(task, this.errorHandler));
 	}
 
 	@Override

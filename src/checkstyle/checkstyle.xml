@@ -245,6 +245,14 @@
 					  value="String.toUpperCase() should be String.toUpperCase(Locale.ROOT)"/>
 			<property name="ignoreComments" value="true"/>
 		</module>
+		<module name="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineJavaCheck">
+			<property name="id" value="systemOutErrPrint"/>
+			<property name="format" value="System\.(out|err)\.print"/>
+			<property name="maximum" value="0"/>
+			<property name="message"
+					  value="Printing to System.out and System.err is forbidden in the main codebase"/>
+			<property name="ignoreComments" value="true"/>
+		</module>
 		<module
 			name="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineJavaCheck">
 			<property name="maximum" value="0"/>

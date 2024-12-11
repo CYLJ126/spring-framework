@@ -47,7 +47,7 @@ Kotlin::
 NOTE: When using Spring Boot, you may want to use `@Configuration` classes of type `WebFluxConfigurer` but without
 `@EnableWebFlux` to keep Spring Boot WebFlux customizations. See more details in
 xref:#webflux-config-customize[the WebFlux config API section] and in
-{spring-boot-docs}/web.html#web.reactive.webflux.auto-configuration[the dedicated Spring Boot documentation].
+{spring-boot-docs-ref}/web/reactive.html#web.reactive.webflux.auto-configuration[the dedicated Spring Boot documentation].
 
 The preceding example registers a number of Spring WebFlux
 xref:web/webflux/dispatcher-handler.adoc#webflux-special-bean-types[infrastructure beans] and adapts to dependencies
@@ -94,7 +94,8 @@ class WebConfig : WebFluxConfigurer {
 [.small]#xref:web/webmvc/mvc-config/conversion.adoc[See equivalent in the Servlet stack]#
 
 By default, formatters for various number and date types are installed, along with support
-for customization via `@NumberFormat`, `@DurationFormat` and `@DateTimeFormat` on fields.
+for customization via `@NumberFormat`, `@DurationFormat`, and `@DateTimeFormat` on fields
+and parameters.
 
 To register custom formatters and converters in Java config, use the following:
 
@@ -349,7 +350,6 @@ which customizes Jackson's default properties with the following ones:
 
 It also automatically registers the following well-known modules if they are detected on the classpath:
 
-* {jackson-github-org}/jackson-datatype-joda[`jackson-datatype-joda`]: Support for Joda-Time types.
 * {jackson-github-org}/jackson-datatype-jsr310[`jackson-datatype-jsr310`]: Support for Java 8 Date and Time API types.
 * {jackson-github-org}/jackson-datatype-jdk8[`jackson-datatype-jdk8`]: Support for other Java 8 types, such as `Optional`.
 * {jackson-github-org}/jackson-module-kotlin[`jackson-module-kotlin`]: Support for Kotlin classes and data classes.
@@ -647,13 +647,12 @@ For https://www.webjars.org/documentation[WebJars], versioned URLs like
 `/webjars/jquery/1.2.0/jquery.min.js` are the recommended and most efficient way to use them.
 The related resource location is configured out of the box with Spring Boot (or can be configured
 manually via `ResourceHandlerRegistry`) and does not require to add the
-`org.webjars:webjars-locator-core` dependency.
+`org.webjars:webjars-locator-lite` dependency.
 
 Version-less URLs like `/webjars/jquery/jquery.min.js` are supported through the
 `WebJarsResourceResolver` which is automatically registered when the
-`org.webjars:webjars-locator-core` library is present on the classpath, at the cost of a
-classpath scanning that could slow down application startup. The resolver can re-write URLs to
-include the version of the jar and can also match against incoming URLs without versions
+`org.webjars:webjars-locator-lite` library is present on the classpath. The resolver can re-write
+URLs to include the version of the jar and can also match against incoming URLs without versions
 -- for example, from `/webjars/jquery/jquery.min.js` to `/webjars/jquery/1.2.0/jquery.min.js`.
 
 TIP: The Java configuration based on `ResourceHandlerRegistry` provides further options
